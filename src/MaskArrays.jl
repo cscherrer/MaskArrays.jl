@@ -7,22 +7,14 @@ EqualTo = Base.Fix2{typeof(isequal)}
 @concrete struct MaskArray{T,N} <: AbstractArray{T,N}
     base
     lookup
-    imputed
+    view
+    buffer
 end
-
-export imputed
-
-imputed(ma::MaskArray) = ma.imputed
 
 Base.length(x::MaskArray) = Base.length(x.base)
 Base.size(x::MaskArray) = Base.size(x.base)
 
-# TODO: Make this more efficient (currently doing the lookup twice)
-function Base.getindex(x::MaskArray, ind)
-    haskey(x.lookup, ind) && return x.imputed[x.lookup[ind]]
-
-    return x.base[ind]
-end
+Base.getindex(ma::MaskArray, inds...) = getindex(ma.base, inds...)
 
 # Get the type constructor, without type parameters
 constructor(x) = typeof(x).name.wrapper
@@ -43,16 +35,24 @@ function maskarray(x::AbstractArray{Union{T,Missing},N}) where {T,N}
         base[j] = x[j]
     end
 
-    imp = Vector{T}(undef, nummissing)
     lookup = Dict(zip(missinginds, 1:nummissing))
+    vu = view(base, missinginds)
 
-    return MaskArray{T,N}(base, lookup, imp)
+    return MaskArray{T,N}(base, lookup, vu, vu)
 end
 
-function replace_storage(ma::MaskArray, v::AbstractVector)
+export replace_storage
+
+function replace_buffer(ma::MaskArray{T,N}, x::AbstractVector) where {T,N}
     @assert eltype(v) == eltype(ma.base)
     @assert length(v) == length(ma.imputed)
-    ma.imputed
+    MaskArray{T,N}(ma.base, ma.lookup, ma.view, x)
+end
+
+export sync!
+
+function sync!(ma::MaskArray)
+    ma.view .= ma.buffer
 end
 
 
