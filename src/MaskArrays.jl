@@ -1,22 +1,25 @@
 module MaskArrays
 
 using ConcreteStructs
-using UniqueVectors
 
 
 EqualTo = Base.Fix2{typeof(isequal)}
 @concrete struct MaskArray{T,N} <: AbstractArray{T,N}
     base
     lookup
-    values
+    imputed
 end
+
+export imputed
+
+imputed(ma::MaskArray) = ma.imputed
 
 Base.length(x::MaskArray) = Base.length(x.base)
 Base.size(x::MaskArray) = Base.size(x.base)
 
 # TODO: Make this more efficient (currently doing the lookup twice)
 function Base.getindex(x::MaskArray, ind)
-    haskey(x.lookup, ind) && return x.values[x.lookup[ind]]
+    haskey(x.lookup, ind) && return x.imputed[x.lookup[ind]]
 
     return x.base[ind]
 end
@@ -40,10 +43,17 @@ function maskarray(x::AbstractArray{Union{T,Missing},N}) where {T,N}
         base[j] = x[j]
     end
 
-    values = Vector{T}(undef, nummissing)
+    imp = Vector{T}(undef, nummissing)
     lookup = Dict(zip(missinginds, 1:nummissing))
 
-    return MaskArray{T,N}(base, lookup, values)
+    return MaskArray{T,N}(base, lookup, imp)
 end
+
+function replace_storage(ma::MaskArray, v::AbstractVector)
+    @assert eltype(v) == eltype(ma.base)
+    @assert length(v) == length(ma.imputed)
+    ma.imputed
+end
+
 
 end
