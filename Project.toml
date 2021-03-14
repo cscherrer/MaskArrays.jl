@@ -3,6 +3,10 @@ uuid = "0779ba27-d013-422b-b20d-67aa3361bf56"
 authors = ["Chad Scherrer <chad.scherrer@gmail.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
+ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
+
 [compat]
 julia = "1"
 
