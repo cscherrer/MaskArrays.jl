@@ -6,8 +6,8 @@ using ConcreteStructs
 EqualTo = Base.Fix2{typeof(isequal)}
 @concrete struct MaskArray{T,N} <: AbstractArray{T,N}
     base
-    lookup
-    view
+    indices
+    missingview
     buffer
 end
 
@@ -35,10 +35,10 @@ function maskarray(x::AbstractArray{Union{T,Missing},N}) where {T,N}
         base[j] = x[j]
     end
 
-    lookup = Dict(zip(missinginds, 1:nummissing))
+    indices = Dict(zip(missinginds, 1:nummissing))
     vu = view(base, missinginds)
 
-    return MaskArray{T,N}(base, lookup, vu, vu)
+    return MaskArray{T,N}(base, indices, vu, vu)
 end
 
 export replace_storage
@@ -46,7 +46,7 @@ export replace_storage
 function replace_buffer(ma::MaskArray{T,N}, x::AbstractVector) where {T,N}
     @assert eltype(v) == eltype(ma.base)
     @assert length(v) == length(ma.imputed)
-    MaskArray{T,N}(ma.base, ma.lookup, ma.view, x)
+    MaskArray{T,N}(ma.base, ma.indices, ma.missingview, x)
 end
 
 export sync!
