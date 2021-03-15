@@ -15,73 +15,128 @@ When working with missing values in an array, there are a few challenges:
 ```julia
 julia> x
 7-element Vector{Union{Missing, Float64}}:
-  missing
- 2.7981042574409654
-  missing
- 3.604098449207802
-  missing
- 0.7771530789987786
- 0.13614296317180433
+ -0.742
+   missing
+ -0.301
+ -0.954
+   missing
+   missing
+ -0.436
 ```
 
 Then we can convert this easily:
 ```julia
 julia> ma = maskarray(x)
-7-element MaskArrays.MaskArray{Float64, 1, Vector{Float64}, Dict{Int64, Int64}, Vector{Float64}}:
- 6.9260378314933e-310
- 2.7981042574409654
- 6.92603783148617e-310
- 3.604098449207802
- 6.9260378314917e-310
- 0.7771530789987786
- 0.13614296317180433
+7-element MaskArray{Float64,1}:
+ -0.742
+  6.9439480399727e-310
+ -0.301
+ -0.954
+  0.0
+  0.0
+ -0.436
 ```
 
-The imputed values are stored here:
+The imputed values are represented as a `view` into the data:
 ```julia
 julia> imputed(ma)
-3-element Vector{Float64}:
- 6.9260378314933e-310
- 6.92603783148617e-310
- 6.9260378314917e-310
+3-element view(::Vector{Float64}, [2, 5, 6]) with eltype Float64:
+ 6.9439480399727e-310
+ 0.0
+ 0.0
 ```
 
 For example, we can easily do
 
 ```julia
-julia> imputed(ma) .= 0.0
-3-element Vector{Float64}:
- 0.0
- 0.0
- 0.0
+julia> imputed(ma) .= 1:3
+3-element view(::Vector{Float64}, [2, 5, 6]) with eltype Float64:
+ 1.0
+ 2.0
+ 3.0
 
 julia> ma
-7-element MaskArrays.MaskArray{Float64, 1, Vector{Float64}, Dict{Int64, Int64}, Vector{Float64}}:
- 0.0
- 2.7981042574409654
- 0.0
- 3.604098449207802
- 0.0
- 0.7771530789987786
- 0.13614296317180433
+7-element MaskArray{Float64,1}:
+ -0.742
+  1.0
+ -0.301
+ -0.954
+  2.0
+  3.0
+ -0.436
 ```
 
-or
+# Buffers
+
+A `MaskArray` has a "buffer" to allow it to easily connect to outside data sources. By default, this is identical to the `imputed` values (so extra allocation is avoided). 
+
+For example, say we have
+```julia
+julia> outside_data = randn(10)
+10-element Vector{Float64}:
+ -0.42452477906454783
+  0.03203787170597264
+  1.1366181451933932
+ -2.018667288063533
+  1.3208417491973015
+  0.07966694888217887
+  1.063328831016872
+  0.07649454253602395
+ -2.4029119018577814
+  0.6908031059739369
+```
+
+we can connect a subset of this to our imputed values like this:
 
 ```julia
-julia> imputed(ma) .= randn(3)
-3-element Vector{Float64}:
- -1.1414540384041585
- -0.49701283338792845
- -0.27001612213513915
+julia> ma2 = replace_buffer(ma, view(outside_data, 3:5))
+7-element MaskArray{Float64,1}:
+ -0.742
+  1.0
+ -0.301
+ -0.954
+  2.0
+  3.0
+ -0.436
+```
 
-julia> ma
-7-element MaskArrays.MaskArray{Float64, 1, Vector{Float64}, Dict{Int64, Int64}, Vector{Float64}}:
- -1.1414540384041585
-  2.7981042574409654
- -0.49701283338792845
-  3.604098449207802
- -0.27001612213513915
-  0.7771530789987786
-  0.13614296317180433
+After a change in the buffer, we need to `sync!` to push the results to the data:
+
+```julia
+julia> sync!(ma2)
+7-element MaskArray{Float64,1}:
+ -0.742
+  1.1366181451933932
+ -0.301
+ -0.954
+ -2.018667288063533
+  1.3208417491973015
+ -0.436
+ ```
+
+Now say we make a change to the outside data:
+
+```julia
+julia> outside_data .= 99999
+10-element Vector{Float64}:
+ 99999.0
+ 99999.0
+ 99999.0
+ 99999.0
+ 99999.0
+ 99999.0
+ 99999.0
+ 99999.0
+ 99999.0
+ 99999.0
+
+julia> sync!(ma2)
+7-element MaskArray{Float64,1}:
+    -0.742
+ 99999.0
+    -0.301
+    -0.954
+ 99999.0
+ 99999.0
+    -0.436
 ```
