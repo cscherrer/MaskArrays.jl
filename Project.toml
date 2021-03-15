@@ -8,6 +8,8 @@ ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
 
 [compat]
+ArrayInterface = "3"
+ConcreteStructs = "0.2"
 julia = "1"
 
 [extras]
