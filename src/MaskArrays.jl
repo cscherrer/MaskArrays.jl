@@ -35,8 +35,8 @@ function maskarray(x::AbstractArray{Union{T,Missing},N}) where {T,N}
     A = constructor(x)
 
     # Build base array, fill with known data
-    base = A{T}(undef, length(x))
-    for j in eachindex(base)
+    base = A{T}(undef, size(x))
+    for j in CartesianIndices(base)
         j ∈ missinginds && continue
         base[j] = x[j]
     end
