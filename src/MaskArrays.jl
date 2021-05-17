@@ -22,24 +22,22 @@ Base.size(x::MaskArray) = Base.size(x.base)
 
 Base.getindex(ma::MaskArray, inds...) = getindex(ma.base, inds...)
 
-# Get the type constructor, without type parameters
-constructor(x) = typeof(x).name.wrapper
-
 export maskarray
 
 function maskarray(x::AbstractArray{Union{T,Missing},N}) where {T,N}
-    # Get the locations of missing Aalues
-    missinginds = findall(ismissing, x)
+    inds = CartesianIndices(x)
+
+    # Get the locations of missing values
+    missinginds = inds[findall(ismissing, x)]
     nummissing = length(missinginds)
 
-    A = constructor(x)
-
-    # Build base array, fill with known data
-    base = A{T}(undef, size(x))
-    for j in CartesianIndices(base)
+    # # Build base array, fill with known data
+    base = similar(x, T)
+    for j in inds
         j ∈ missinginds && continue
         base[j] = x[j]
     end
+
 
     indices = Dict(zip(missinginds, 1:nummissing))
     vu = view(base, missinginds)
