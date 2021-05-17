@@ -2,5 +2,6 @@ using MaskArrays
 using Test
 
 @testset "MaskArrays.jl" begin
-    # Write your tests here.
+    include("../examples/imputation.jl")
+
 end
